@@ -1,0 +1,8 @@
+python-dotenv
+py-cord==2.5
+openai
+pydantic
+pymongo
+sseclient-py
+hydra-core
+omegaconf
