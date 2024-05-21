@@ -32,12 +32,17 @@ class LLMCog(commands.Cog):
         ### page
         self.pages = []
 
+        self.chatting_enabled = True
+
     llm_cog = SlashCommandGroup("llm", "Commands for llm.")
 
     @commands.Cog.listener()
     @wrap_log_async
     async def on_message(self, message: Message):
         # This function listens for incoming messages and generates a response using the LLM
+
+        if not self.chatting_enabled:
+            return
 
         # Ignore messages from the bot itself
         if message.author == self.bot.user:
@@ -119,7 +124,47 @@ class LLMCog(commands.Cog):
     @wrap_log_async
     async def set_prompt(self, ctx: ApplicationContext, prompt):
         self.llm.prompt = prompt
-        await ctx.respond("프롬프트를 수정하였습니다.\n프롬프트: {self.llm.prompt", ephemeral=False)
+        await ctx.respond(f"프롬프트를 수정하였습니다.\n프롬프트: {self.llm.prompt}", ephemeral=False)
+
+    @llm_cog.command(name="toggle_chat", description="on/off chat")
+    @wrap_log_async
+    async def toggle_chat(self, ctx: ApplicationContext):
+        self.chatting_enabled = not self.chatting_enabled
+        if self.chatting_enabled:
+            await ctx.respond("채팅 기능을 활성화했습니다.", ephemeral=False)
+        else:
+            await ctx.respond("채팅 기능을 비활성화했습니다.", ephemeral=False)
+
+    @llm_cog.command(name="regenerate", description="regenerate last message")
+    @wrap_log_async
+    async def regenerate(self, ctx: ApplicationContext):
+        chat = self.chat_database.get_last_channel_chat(ctx.channel.id)
+        if chat is not None and len(chat.messages) >= 2:
+            self.chat_database.delete_last_message(chat.id)
+            try:
+                # Generate response from LLM
+                response = self.llm.create(chat.messages)
+
+                # Add LLM response to new chat
+                self.chat_database.add_message(
+                    chat_id=chat.id,
+                    message=MessageData(
+                        id=int(time.time() * 1000),
+                        content=response,
+                        author="assistant",
+                        timestamp=datetime.now(),
+                        chat_id=chat.id,
+                    ),
+                )
+
+            except Exception as e:
+                logger.error(e)
+                response = str(e)
+                # delete last user message in self.chat
+                self.chat_database.delete_message(chat.id, chat.messages[-1].id)
+            await ctx.send(response)
+        else:
+            await ctx.respond("채팅 내역이 없습니다.", ephemeral=True)
 
     @llm_cog.command(name="delete_last_message", description="마지막 메시지 제거")
     @wrap_log_async

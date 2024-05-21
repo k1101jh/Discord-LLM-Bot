@@ -16,7 +16,7 @@ class OpenAI:
         super().__init__()
         self.name = "AI"
         self.__prompt = "친절한 챗봇으로서 상대방의 요청에 최대한 자세하고 친절하게 답하자. 모든 대답은 한국어(Korean)으로 대답해줘."
-        self.client = openai.OpenAI(base_url=os.getenv("OPENAI_API_BASE"), api_key=os.getenv("OPENAI_API_KEY"), timeout=10)
+        self.client = openai.OpenAI(base_url=os.getenv("OPENAI_API_BASE"), api_key=os.getenv("OPENAI_API_KEY"), timeout=30)
         
         print(os.getenv("OPENAI_API_BASE"))
         
