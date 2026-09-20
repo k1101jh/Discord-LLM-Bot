@@ -5,7 +5,7 @@ Ollama 또는 OpenAI 호환 REST API 서버를 호출하는 LLM 클래스입니�
 """
 
 import os
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import openai
 
 from llm.base_llm import BaseLLM
@@ -44,12 +44,29 @@ class OpenAI(BaseLLM):
         self.name = new_name
 
     @wrap_log
-    def create(self, prompt: str, chat_messages: List[MessageData]) -> str:
+    def get_available_models(self) -> List[str]:
+        """Ollama/OpenAI API 서버에서 현재 사용 가능한 LLM 모델 목록을 동적으로 조회합니다.
+
+        Returns:
+            List[str]: 모델 ID 목록
+        """
+        try:
+            models_page = self.client.models.list()
+            model_list: List[str] = [model.id for model in models_page.data]
+            return model_list
+        except Exception as e:
+            logger.error(f"모델 목록 조회 실패: {e}")
+            default_model = PARAMS.get("model", "qwen2.5:7b")
+            return [default_model]
+
+    @wrap_log
+    def create(self, prompt: str, chat_messages: List[MessageData], model_name: Optional[str] = None) -> str:
         """프롬프트와 메시지 이력을 바탕으로 텍스트 응답을 생성합니다.
 
         Args:
             prompt (str): 시스템 프롬프트 지침
             chat_messages (List[MessageData]): 이전 대화 메시지 이력 목록
+            model_name (Optional[str]): 사용할 특정한 모델명 (None일 경우 기본 모델 사용)
 
         Returns:
             str: 생성을 완료한 답변 문자열
@@ -62,9 +79,22 @@ class OpenAI(BaseLLM):
             role = "assistant" if message.author in ("assistant", self.name) else "user"
             messages.append({"role": role, "content": message.content})
 
+        params = PARAMS.copy()
+        if model_name:
+            params["model"] = model_name
+
         response = self.client.chat.completions.create(
             messages=messages,
-            **PARAMS,
+            **params,
         )
-        content: str = response.choices[0].message.content or ""
-        return content.strip()
+        msg_obj = response.choices[0].message
+        content: str = (
+            getattr(msg_obj, "content", None)
+            or getattr(msg_obj, "reasoning_content", None)
+            or getattr(msg_obj, "thinking", None)
+            or ""
+        )
+        return content.strip()
+
+
+

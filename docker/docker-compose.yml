@@ -15,7 +15,7 @@ services:
       - MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-root}:${MONGO_INITDB_ROOT_PASSWORD:-examplepassword}@discord-bot-mongo:27017/${DATABASE_NAME:-discord_chat_bot}?authSource=admin
       - OPENAI_API_BASE=${OPENAI_API_BASE:-http://host.docker.internal:11434/v1}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-ollama}
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:12b}
 
     networks:
       - bot-network
@@ -23,7 +23,9 @@ services:
       - mongodb
     volumes:
       - ../:/app
+      - /app/.venv
     command: uv run bash scripts/start.sh
+
 
   mongodb:
     image: mongo:latest

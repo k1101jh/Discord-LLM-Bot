@@ -45,6 +45,7 @@ class ChatData(BaseModel):
         messages (List[MessageData]): 메시지 목록
         created_at (datetime): 세션 생성 시각
         channel_id (int): 디스코드 채널 ID
+        model (Optional[str]): 해당 세션에서 사용할 특정 LLM 모델명
     """
 
     id: int
@@ -55,7 +56,22 @@ class ChatData(BaseModel):
     messages: List[MessageData] = []
     created_at: datetime
     channel_id: int
+    model: Optional[str] = None
 
+
+
+
+
+class ChannelSettingData(BaseModel):
+    """디스코드 채널별 설정 데이터 모델
+
+    Attributes:
+        channel_id (int): 디스코드 채널 ID
+        auto_respond (bool): 멘션 없이 항상 대답하기 옵션 활성화 여부
+    """
+
+    channel_id: int
+    auto_respond: bool = False
 
 
 class ChatDatabase:
@@ -76,7 +92,38 @@ class ChatDatabase:
         self.client: MongoClient = pymongo.MongoClient(uri)
         self.db: MongoDatabase = self.client[db_name]
         self.chats: Collection = self.db["chats"]
+        self.settings: Collection = self.db["channel_settings"]
         logger.info(f"MongoDB 연결 완료: database='{db_name}'")
+
+    @wrap_log
+    def get_channel_auto_respond(self, channel_id: int) -> bool:
+        """채널의 자동 응답 설정(Auto-Response) 여부를 조회합니다.
+
+        Args:
+            channel_id (int): 디스코드 채널 ID
+
+        Returns:
+            bool: 자동 응답 활성화 여부 (기본값: False)
+        """
+        setting = self.settings.find_one({"channel_id": channel_id})
+        if setting:
+            return setting.get("auto_respond", False)
+        return False
+
+    @wrap_log
+    def set_channel_auto_respond(self, channel_id: int, auto_respond: bool) -> None:
+        """채널의 자동 응답 설정을 변경하거나 새로 저장합니다.
+
+        Args:
+            channel_id (int): 디스코드 채널 ID
+            auto_respond (bool): 설정할 자동 응답 값
+        """
+        self.settings.update_one(
+            {"channel_id": channel_id},
+            {"$set": {"channel_id": channel_id, "auto_respond": auto_respond}},
+            upsert=True,
+        )
+
 
     @wrap_log
     def create_chat(self, chat: ChatData) -> Optional[int]:
@@ -137,7 +184,37 @@ class ChatDatabase:
         return ChatData(**chat) if chat else None
 
     @wrap_log
+    def get_channel_chats(self, channel_id: int, limit: int = 10) -> List[ChatData]:
+        """특정 디스코드 채널의 세션 목록을 최신순으로 조회합니다.
+
+        Args:
+            channel_id (int): 디스코드 채널 ID
+            limit (int): 조회할 최대 세션 수 (기본값: 10)
+
+        Returns:
+            List[ChatData]: 세션 목록
+        """
+        cursor = self.chats.find({"channel_id": channel_id}).sort("created_at", -1).limit(limit)
+        return [ChatData(**chat) for chat in cursor]
+
+
+    @wrap_log
+    def update_chat_model(self, chat_id: int, model_name: str) -> bool:
+        """채팅 세션에서 사용할 LLM 모델명을 변경합니다.
+
+        Args:
+            chat_id (int): 채팅 세션 ID
+            model_name (str): 적용할 LLM 모델명
+
+        Returns:
+            bool: 업데이트 성공 여부
+        """
+        result = self.chats.update_one({"id": chat_id}, {"$set": {"model": model_name}})
+        return result.modified_count > 0
+
+    @wrap_log
     def add_message(self, chat_id: int, message: MessageData) -> None:
+
         """채팅 세션에 새로운 메시지를 추가합니다.
 
         Args:

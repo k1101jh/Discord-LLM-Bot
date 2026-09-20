@@ -52,14 +52,15 @@
 
    # MongoDB 인증 설정
    MONGO_INITDB_ROOT_USERNAME=root
-   MONGO_INITDB_ROOT_PASSWORD=examplepassword
+   MONGO_INITDB_ROOT_PASSWORD=<your_mongo_password>
    DATABASE_NAME=discord_chat_bot
-   MONGO_URI=mongodb://root:examplepassword@mongodb:27017/discord_chat_bot?authSource=admin
+   MONGO_URI=mongodb://root:<your_mongo_password>@mongodb:27017/discord_chat_bot?authSource=admin
 
    # Mongo Express 웹 UI 설정 (http://localhost:8081)
    MONGO_EXPRESS_USER=admin
-   MONGO_EXPRESS_PASSWORD=pass
+   MONGO_EXPRESS_PASSWORD=<your_express_password>
    ```
+
 
 ---
 

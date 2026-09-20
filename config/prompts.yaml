@@ -1,0 +1,13 @@
+# Discord LLM Bot 기본 설정 및 프롬프트 관리 파일
+
+bot_settings:
+  name: "Assistant"
+  default_instructions: >
+    친절한 챗봇으로서 상대방의 요청에 최대한 자세하고 친절하게 답하자.
+    모든 대답은 한국어(Korean)로 대답해 줘.
+
+llm_parameters:
+  max_tokens: 500
+  temperature: 0.7
+  top_p: 0.9
+  timeout: 120.0  # 타임아웃 120초 설정으로 여유 확보

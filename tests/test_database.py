@@ -110,4 +110,77 @@ def test_add_message(database: ChatDatabase) -> None:
     assert retrieved_chat.messages[0].content == message.content
     assert retrieved_chat.messages[0].author == message.author
     assert retrieved_chat.messages[0].chat_id == message.chat_id
+
+
+def test_channel_auto_respond(database: ChatDatabase) -> None:
+    """채널별 자동 응답 설정 조회 및 변경 테스트"""
+    channel_id: int = 12345
+
+    # 기본값은 False
+    assert database.get_channel_auto_respond(channel_id) is False
+
+    # True로 설정
+    database.set_channel_auto_respond(channel_id, True)
+    assert database.get_channel_auto_respond(channel_id) is True
+
+    # 다시 False로 설정
+    database.set_channel_auto_respond(channel_id, False)
+    assert database.get_channel_auto_respond(channel_id) is False
+
+
+def test_get_channel_chats(database: ChatDatabase) -> None:
+    """특정 채널의 세션 목록 조회 검증 테스트"""
+    chat1 = ChatData(
+        id=101,
+        first_message_id=1,
+        name="Assistant",
+        prompt="프롬프트1",
+        chat_enabled=True,
+        messages=[],
+        created_at=datetime.now(),
+        channel_id=99,
+    )
+    chat2 = ChatData(
+        id=102,
+        first_message_id=2,
+        name="Assistant",
+        prompt="프롬프트2",
+        chat_enabled=True,
+        messages=[],
+        created_at=datetime.now() + timedelta(minutes=10),
+        channel_id=99,
+    )
+
+    database.create_chat(chat1)
+    database.create_chat(chat2)
+
+    sessions = database.get_channel_chats(99)
+    assert len(sessions) == 2
+    assert sessions[0].id == 102  # 최신순 정렬 확인
+    assert sessions[1].id == 101
+
+
+def test_update_chat_model(database: ChatDatabase) -> None:
+    """채팅 세션 모델 변경 검증 테스트"""
+    chat = ChatData(
+        id=201,
+        first_message_id=1,
+        name="Assistant",
+        prompt="프롬프트",
+        chat_enabled=True,
+        messages=[],
+        created_at=datetime.now(),
+        channel_id=1,
+        model="gemma4:12b",
+    )
+    database.create_chat(chat)
+    assert database.get_chat(201).model == "gemma4:12b"
+
+    database.update_chat_model(201, "qwen2.5:7b")
+    updated_chat = database.get_chat(201)
+    assert updated_chat is not None
+    assert updated_chat.model == "qwen2.5:7b"
+
+
+
  
