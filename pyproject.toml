@@ -1,0 +1,24 @@
+[project]
+name = "discord-llm-bot"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "hydra-core>=1.3.7",
+    "mongomock>=4.3.0",
+    "omegaconf>=2.3.1",
+    "openai>=3.16.2",
+    "py-cord==2.5",
+    "pydantic>=2.13.5",
+    "pymongo>=4.18.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "python-dotenv>=1.2.3",
+    "sseclient-py>=1.9.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+
+

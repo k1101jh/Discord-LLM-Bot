@@ -1,34 +1,68 @@
-version: '3.3'
-
 services:
   discord-bot:
     build:
-      context: ./docker
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: discord-bot
-    image: discord-bot
-    working_dir: /usr/src/app
+    image: discord-bot:latest
+    restart: always
+    working_dir: /app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - ../.env
+    environment:
+      - MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-root}:${MONGO_INITDB_ROOT_PASSWORD:-examplepassword}@discord-bot-mongo:27017/${DATABASE_NAME:-discord_chat_bot}?authSource=admin
+      - OPENAI_API_BASE=${OPENAI_API_BASE:-http://host.docker.internal:11434/v1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-ollama}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b}
+
     networks:
-      - node-network
+      - bot-network
     depends_on:
       - mongodb
-    links:
-      - mongodb
     volumes:
-      - ../:/usr/src/app
-    command: bash "/usr/src/app/start.sh"
+      - ../:/app
+    command: uv run bash scripts/start.sh
 
   mongodb:
     image: mongo:latest
+    container_name: discord-bot-mongo
+    restart: always
     ports:
       - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-examplepassword}
     volumes:
       - ../data:/data/db
     networks:
-      - node-network
-    command: mongod --dbpath /data/db
-  
+      - bot-network
+
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: discord-bot-mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME:-root}:${MONGO_INITDB_ROOT_PASSWORD:-examplepassword}@discord-bot-mongo:27017/?authSource=admin
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME:-root}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-examplepassword}
+      ME_CONFIG_MONGODB_SERVER: discord-bot-mongo
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USER:-admin}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-pass}
+    networks:
+      - bot-network
+    depends_on:
+      - mongodb
+
+
+
 networks:
-  node-network:
+  bot-network:
     driver: bridge
+
+
 

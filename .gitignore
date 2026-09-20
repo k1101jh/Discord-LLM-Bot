@@ -1,10 +1,14 @@
 .env
+.env copy
 temp/
 chroma_db/
 vector_db_data/
 .pytest_cache/
 .coverage
 htmlcov/
+uv.lock
+.python-version
+
 
 # Data, Logs, Vector DB & Temp
 data/
